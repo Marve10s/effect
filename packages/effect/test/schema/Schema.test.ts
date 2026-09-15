@@ -2406,7 +2406,8 @@ Expected a value between -2147483648 and 2147483647`
     it("double transformation", async () => {
       const schema = Schema.String.pipe(
         Schema.decode(
-          SchemaTransformation.trim().compose(
+          SchemaTransformation.compose(
+            SchemaTransformation.trim(),
             SchemaTransformation.toLowerCase()
           )
         )
@@ -2554,7 +2555,8 @@ Expected a value between -2147483648 and 2147483647`
     it("double transformation", async () => {
       const schema = Schema.String.pipe(
         Schema.encode(
-          SchemaTransformation.trim().compose(
+          SchemaTransformation.compose(
+            SchemaTransformation.trim(),
             SchemaTransformation.toLowerCase()
           ).flip()
         )
@@ -8296,12 +8298,12 @@ Expected a value between -2147483648 and 2147483647`
         Cause.die(new Error("defect"))
       )
       const decodeSchema = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter(() => Effect.failCause(cause)),
+        decode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause)),
         encode: SchemaGetter.passthrough()
       }))
       const encodeSchema = Schema.String.pipe(Schema.encode({
         decode: SchemaGetter.passthrough(),
-        encode: new SchemaGetter.Getter(() => Effect.failCause(cause))
+        encode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause))
       }))
 
       const r1 = await Schema.decodeUnknownPromise(decodeSchema)("a").then(Result.succeed, Result.fail)
@@ -8339,12 +8341,12 @@ Expected a value between -2147483648 and 2147483647`
 
     it("should throw an error when the cause is not a schema issue", () => {
       const decodeSchema = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter(() => Effect.die(new Error("decode defect"))),
+        decode: SchemaGetter.transformOptionalEffect(() => Effect.die(new Error("decode defect"))),
         encode: SchemaGetter.passthrough()
       }))
       const encodeSchema = Schema.String.pipe(Schema.encode({
         decode: SchemaGetter.passthrough(),
-        encode: new SchemaGetter.Getter(() => Effect.die(new Error("encode defect")))
+        encode: SchemaGetter.transformOptionalEffect(() => Effect.die(new Error("encode defect")))
       }))
 
       throws(() => Schema.decodeUnknownOption(decodeSchema)("a"), (e) => {
@@ -8365,12 +8367,12 @@ Expected a value between -2147483648 and 2147483647`
         Cause.die(new Error("defect"))
       )
       const decodeSchema = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter(() => Effect.failCause(cause)),
+        decode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause)),
         encode: SchemaGetter.passthrough()
       }))
       const encodeSchema = Schema.String.pipe(Schema.encode({
         decode: SchemaGetter.passthrough(),
-        encode: new SchemaGetter.Getter(() => Effect.failCause(cause))
+        encode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause))
       }))
 
       throws(() => Schema.decodeUnknownOption(decodeSchema)("a"), (e) => {
@@ -8427,12 +8429,12 @@ Expected a value between -2147483648 and 2147483647`
         Cause.die(new Error("defect"))
       )
       const decodeSchema = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter(() => Effect.failCause(cause)),
+        decode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause)),
         encode: SchemaGetter.passthrough()
       }))
       const encodeSchema = Schema.String.pipe(Schema.encode({
         decode: SchemaGetter.passthrough(),
-        encode: new SchemaGetter.Getter(() => Effect.failCause(cause))
+        encode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause))
       }))
 
       throws(() => Schema.decodeUnknownResult(decodeSchema)("a"), (e) => {
@@ -8480,12 +8482,12 @@ Expected a value between -2147483648 and 2147483647`
         Cause.die(new Error("defect"))
       )
       const decodeSchema = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter(() => Effect.failCause(cause)),
+        decode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause)),
         encode: SchemaGetter.passthrough()
       }))
       const encodeSchema = Schema.String.pipe(Schema.encode({
         decode: SchemaGetter.passthrough(),
-        encode: new SchemaGetter.Getter(() => Effect.failCause(cause))
+        encode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause))
       }))
 
       throws(() => Schema.decodeUnknownSync(decodeSchema)("a"), (e) => {
@@ -8504,7 +8506,7 @@ Expected a value between -2147483648 and 2147483647`
   describe("decodeUnknownResult", () => {
     it("should throw on async decoding", () => {
       const AsyncString = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter((os: Option.Option<string>) =>
+        decode: SchemaGetter.transformOptionalEffect((os: Option.Option<string>) =>
           Effect.gen(function*() {
             yield* Effect.sleep("10 millis")
             return os
@@ -8520,10 +8522,10 @@ Expected a value between -2147483648 and 2147483647`
     it("should throw on missing dependency", () => {
       class MagicNumber extends Context.Service<MagicNumber, number>()("MagicNumber") {}
       const DepString = Schema.Number.pipe(Schema.decode({
-        decode: SchemaGetter.onSome((n) =>
+        decode: SchemaGetter.transformEffect((n) =>
           Effect.gen(function*() {
             const magicNumber = yield* MagicNumber
-            return Option.some(n * magicNumber)
+            return n * magicNumber
           })
         ),
         encode: SchemaGetter.passthrough()
@@ -8537,7 +8539,7 @@ Expected a value between -2147483648 and 2147483647`
   describe("decodeUnknownExit", () => {
     it("should die on async decoding", () => {
       const AsyncString = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter((os: Option.Option<string>) =>
+        decode: SchemaGetter.transformOptionalEffect((os: Option.Option<string>) =>
           Effect.gen(function*() {
             yield* Effect.sleep("10 millis")
             return os
@@ -8554,10 +8556,10 @@ Expected a value between -2147483648 and 2147483647`
     it("should die on missing dependency", () => {
       class MagicNumber extends Context.Service<MagicNumber, number>()("MagicNumber") {}
       const DepString = Schema.Number.pipe(Schema.decode({
-        decode: SchemaGetter.onSome((n) =>
+        decode: SchemaGetter.transformEffect((n) =>
           Effect.gen(function*() {
             const magicNumber = yield* MagicNumber
-            return Option.some(n * magicNumber)
+            return n * magicNumber
           })
         ),
         encode: SchemaGetter.passthrough()
@@ -8575,12 +8577,12 @@ Expected a value between -2147483648 and 2147483647`
         Cause.die(new Error("defect"))
       )
       const decodeSchema = Schema.String.pipe(Schema.decode({
-        decode: new SchemaGetter.Getter(() => Effect.failCause(cause)),
+        decode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause)),
         encode: SchemaGetter.passthrough()
       }))
       const encodeSchema = Schema.String.pipe(Schema.encode({
         decode: SchemaGetter.passthrough(),
-        encode: new SchemaGetter.Getter(() => Effect.failCause(cause))
+        encode: SchemaGetter.transformOptionalEffect(() => Effect.failCause(cause))
       }))
 
       const decodeExit = Schema.decodeUnknownExit(decodeSchema)("a")
