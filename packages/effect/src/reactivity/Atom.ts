@@ -924,16 +924,15 @@ function makeStream<A, E>(
   }
   services = Context.add(services, AtomRegistry, ctx.registry)
 
-  let last = Option.none<A>()
+  let emitted = false
   const run = Effect.scopedWith((scope) =>
     Effect.flatMap(Channel.toPullScoped(stream.channel, scope), (pull) =>
       Effect.whileLoop({
         while: constTrue,
         body: () => pull,
         step(arr) {
-          const value = Arr.lastNonEmpty(arr)
-          last = Option.some(value)
-          ctx.setSelf(AsyncResult.success(value, {
+          emitted = true
+          ctx.setSelf(AsyncResult.success(Arr.lastNonEmpty(arr), {
             waiting: true
           }))
         }
@@ -942,7 +941,8 @@ function makeStream<A, E>(
     Effect.catchCause((cause) => {
       if (Pull.isDoneCause(cause)) {
         pipe(
-          last,
+          emitted ? ctx.self<AsyncResult.AsyncResult<A, E | Cause.NoSuchElementError>>() : Option.none(),
+          Option.flatMap(AsyncResult.value),
           Option.match({
             onNone: () =>
               ctx.setSelf(

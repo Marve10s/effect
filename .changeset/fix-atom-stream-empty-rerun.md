@@ -2,4 +2,4 @@
 "effect": patch
 ---
 
-Fix stream atoms reporting the previous run's value as `Success` when a rerun or refresh completes without emitting; they now fail with `NoSuchElementError` and keep that value as `previousSuccess`.
+Fix stream atoms reporting an earlier value as `Success` when a run, such as a rerun or refresh, completes without emitting; they now fail with `NoSuchElementError` and keep that value as `previousSuccess`.

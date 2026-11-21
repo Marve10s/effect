@@ -1948,6 +1948,21 @@ describe("Atom", { concurrent: false }, () => {
     cancel()
   })
 
+  it("stream completion keeps a value set after the last emission", async () => {
+    const atom = Atom.make((get) =>
+      Stream.fromIterable<string>(["draft"]).pipe(
+        Stream.ensuring(Effect.sync(() => get.setSelf(AsyncResult.success("saved"))))
+      )
+    )
+    const r = AtomRegistry.make()
+    const cancel = r.mount(atom)
+
+    await vitest.advanceTimersByTimeAsync(0)
+    assert.deepStrictEqual(r.get(atom), AsyncResult.success("saved"))
+
+    cancel()
+  })
+
   it("Option is not an Effect", async () => {
     const atom = Atom.make(Option.none<string>())
     const r = AtomRegistry.make()
