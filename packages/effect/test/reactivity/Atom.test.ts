@@ -1926,6 +1926,28 @@ describe("Atom", { concurrent: false }, () => {
     cancel()
   })
 
+  it("stream rerun without items produces NoSuchElementError", async () => {
+    const rows = Atom.make<ReadonlyArray<string>>(["Alice"])
+    const atom = Atom.make((get) => Stream.fromIterable(get(rows)))
+    const r = AtomRegistry.make()
+    const cancel = r.mount(atom)
+
+    await vitest.advanceTimersByTimeAsync(0)
+    assert.deepStrictEqual(r.get(atom), AsyncResult.success("Alice"))
+
+    r.set(rows, [])
+    await vitest.advanceTimersByTimeAsync(0)
+    const result = r.get(atom)
+    assert(AsyncResult.isFailure(result))
+    assert.deepStrictEqual(
+      AsyncResult.error(result),
+      Option.some(new Cause.NoSuchElementError())
+    )
+    assert.deepStrictEqual(AsyncResult.value(result), Option.some("Alice"))
+
+    cancel()
+  })
+
   it("Option is not an Effect", async () => {
     const atom = Atom.make(Option.none<string>())
     const r = AtomRegistry.make()
